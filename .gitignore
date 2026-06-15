@@ -1,0 +1,18 @@
+# Backend Python
+__pycache__/
+*.pyc
+.env
+uploads/
+chroma_db/
+backend/venv/
+venv/
+
+# Frontend Node
+node_modules/
+.next/
+.env.local
+
+# PDFs & Word docs (tài liệu học tập — không commit lên git)
+*.pdf
+*.docx
+!Mau_De_Thi_Toan.docx

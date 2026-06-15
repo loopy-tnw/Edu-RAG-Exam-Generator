@@ -1,0 +1,26 @@
+[BƯỚC 1: NẠP KIẾN THỨC]
+Giáo viên tải lên các file PDF (Giáo trình, slide bài giảng) 
+--> Hệ thống bóc tách Text + Trích xuất Hình ảnh lưu vào thư mục đệm 
+--> Chunking văn bản (Kích thước ~800 tokens, trùng lặp 150 tokens) 
+--> Tạo Embeddings --> Lưu vào Vector DB (ChromaDB).
+
+[BƯỚC 2: CẤU HÌNH ĐỀ THI]
+Giáo viên chọn tham số trên giao diện:
+- Chọn tài liệu áp dụng.
+- Số lượng câu hỏi (Ví dụ: 10 câu).
+- Định dạng: 70% Trắc nghiệm, 30% Tự luận.
+- Mức độ tư duy (Theo thang Bloom: Nhận biết, Thông hiểu, Vận dụng).
+
+[BƯỚC 3: XỬ LÝ RAG & SINH ĐỀ]
+Hệ thống tính toán độ tương đồng (Cosine Similarity) để lấy ra các đoạn tài liệu phù hợp nhất 
+--> Gửi Prompt kèm Context và Định dạng Output JSON nghiêm ngặt cho LLM 
+--> LLM trả về cấu trúc đề thi.
+
+[BƯỚC 4: XEM TRƯỚC VÀ ĐIỀU CHỈNH (HUMAN-IN-THE-LOOP)]
+Giao diện hiển thị đề thi dạng form. Giáo viên có thể:
+- Sửa trực tiếp chữ trong câu hỏi/đáp án.
+- Bấm "Đổi câu khác" (Hệ thống sẽ gọi API lấy chunk khác để sinh lại câu đó).
+- Chat với AI: "Hãy thêm lời giải chi tiết cho câu số 3".
+
+[BƯỚC 5: XUẤT BẢN]
+Hệ thống đóng gói dữ liệu thành file .docx (sử dụng python-docx) theo format chuẩn của Bộ Giáo dục & Đào tạo (Font Times New Roman, Chia bảng đáp án ở cuối trang).

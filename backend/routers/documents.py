@@ -18,6 +18,7 @@ async def upload_document(
     if not file.filename.endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Chỉ hỗ trợ file PDF.")
 
+
     try:
         meta_dict = json.loads(metadata)
     except json.JSONDecodeError:

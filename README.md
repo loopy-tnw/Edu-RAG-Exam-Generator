@@ -171,8 +171,8 @@ Chi tiết các sơ đồ Use Case, Activity (Swimlane) và Sequence Diagram đ�
 
 ## 👤 Tác giả
 
-- **Nguyễn Thùy Ngân** — Nghiên cứu & Phát triển
-- Dự án: Mini Project 1 — Edu-RAG Exam Generator
+- **Nguyễn Thúy Ngân** — Nghiên cứu & Phát triển
+- Dự án: Edu-RAG Exam Generator
 
 ---
 

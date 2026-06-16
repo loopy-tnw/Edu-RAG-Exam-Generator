@@ -8,24 +8,22 @@ from services.export_service import build_docx
 
 router = APIRouter()
 
-
 class ExamConfigRequest(BaseModel):
-    documentIds:     List[str]
+    grade:           str
+    subject:         str
+    topicPrompt:     str
     totalQuestions:  int
     mcqCount:        int
     essayCount:      int
-    difficulty:      List[str]
-    subject:         str
-    examTitle:       str
-    duration:        int
-    schoolName:      str
-    schoolYear:      str
-
+    examTitle:       Optional[str] = ""
+    duration:        Optional[int] = 90
+    schoolName:      Optional[str] = ""
+    schoolYear:      Optional[str] = ""
+    documentIds:     Optional[List[str]] = []
 
 class OptionModel(BaseModel):
     key:  str
     text: str
-
 
 class QuestionModel(BaseModel):
     id:          str
@@ -37,11 +35,9 @@ class QuestionModel(BaseModel):
     sourceChunk: Optional[str] = None
     points:      float
 
-
 class ExportRequest(BaseModel):
     exam:   dict
     format: str  # "docx" | "pdf"
-
 
 @router.post("/generate")
 async def generate_exam(config: ExamConfigRequest):
@@ -49,21 +45,21 @@ async def generate_exam(config: ExamConfigRequest):
     RAG Pipeline: Truy xuất context → LLM sinh câu hỏi → Self-RAG Critique.
     Trả về danh sách câu hỏi đã kiểm định.
     """
-    if not config.documentIds:
-        raise HTTPException(status_code=400, detail="Phải chọn ít nhất 1 tài liệu.")
     if config.mcqCount + config.essayCount == 0:
         raise HTTPException(status_code=400, detail="Tổng số câu phải lớn hơn 0.")
 
-    questions = await generate_exam_questions(config.dict())
+    result = await generate_exam_questions(config.dict())
+    questions    = result["questions"]
+    used_fallback = result["usedFallback"]
 
     return {
-        "id":         __import__("uuid").uuid4().hex,
-        "title":      config.examTitle or f"Đề {config.subject} — {config.schoolYear}",
-        "config":     config.dict(),
-        "questions":  questions,
-        "createdAt":  __import__("datetime").datetime.utcnow().isoformat() + "Z",
+        "id":           __import__("uuid").uuid4().hex,
+        "title":        config.examTitle or f"Đề {config.subject} {config.grade}",
+        "config":       config.dict(),
+        "questions":    questions,
+        "usedFallback": used_fallback,
+        "createdAt":    __import__("datetime").datetime.utcnow().isoformat() + "Z",
     }
-
 
 @router.post("/export")
 async def export_exam(req: ExportRequest):

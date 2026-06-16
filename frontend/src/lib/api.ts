@@ -54,6 +54,7 @@ export interface GeneratedExam {
   config: ExamConfig;
   questions: Question[];
   createdAt: string;
+  usedFallback?: boolean; // BUG-06: true khi không có tài liệu khớp → dùng kiến thức chung
 }
 
 // ═══════════════════════════════════════════
@@ -158,10 +159,24 @@ export const MOCK_QUESTIONS: Question[] = [
 // ═══════════════════════════════════════════
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK !== "false"; // true by default
-
-// Giả lập độ trễ mạng
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true"; // false by default
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Helper: fetch + kiểm tra HTTP status. Throw lỗi rõ ràng nếu server trả 4xx/5xx. */
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  const res = await fetch(url, options);
+  if (!res.ok) {
+    let errMsg = `Lỗi HTTP ${res.status}`;
+    try {
+      const body = await res.json();
+      errMsg = body.detail || body.error || errMsg;
+    } catch {
+      errMsg = (await res.text()) || errMsg;
+    }
+    throw new Error(errMsg);
+  }
+  return res;
+}
 
 // ── Documents ──────────────────────────────
 
@@ -170,7 +185,7 @@ export async function getDocuments(): Promise<Document[]> {
     await delay(500);
     return MOCK_DOCUMENTS;
   }
-  const res = await fetch(`${API_BASE}/documents`);
+  const res = await apiFetch(`${API_BASE}/documents`);
   return res.json();
 }
 
@@ -198,13 +213,13 @@ export async function uploadDocument(
   const form = new FormData();
   form.append("file", file);
   form.append("metadata", JSON.stringify(metadata));
-  const res = await fetch(`${API_BASE}/documents/upload`, { method: "POST", body: form });
+  const res = await apiFetch(`${API_BASE}/documents/upload`, { method: "POST", body: form });
   return res.json();
 }
 
 export async function deleteDocument(id: string): Promise<void> {
   if (USE_MOCK) { await delay(300); return; }
-  await fetch(`${API_BASE}/documents/${id}`, { method: "DELETE" });
+  await apiFetch(`${API_BASE}/documents/${id}`, { method: "DELETE" });
 }
 
 // ── Exam Generation ────────────────────────
@@ -220,7 +235,7 @@ export async function generateExam(config: ExamConfig): Promise<GeneratedExam> {
       createdAt: new Date().toISOString(),
     };
   }
-  const res = await fetch(`${API_BASE}/exams/generate`, {
+  const res = await apiFetch(`${API_BASE}/exams/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(config),
@@ -265,6 +280,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       lastActivity: new Date().toISOString(),
     };
   }
-  const res = await fetch(`${API_BASE}/stats`);
+  const res = await apiFetch(`${API_BASE}/stats`);
   return res.json();
 }

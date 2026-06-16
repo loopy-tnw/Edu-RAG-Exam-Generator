@@ -1,3 +1,6 @@
+from dotenv import load_dotenv
+load_dotenv()  # Phải load trước khi import các service (embedding/rag dùng os.getenv ngay khi khởi tạo)
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import documents, exams

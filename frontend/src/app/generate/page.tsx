@@ -149,18 +149,12 @@ function Step2({
             <input className="form-input" type="number" min={0} max={40}
               value={config.mcqCount ?? 12}
               onChange={(e) => onChange({ ...config, mcqCount: Number(e.target.value) })} />
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-              {((config.mcqCount ?? 12) * 0.25).toFixed(2)} điểm (0.25đ/câu)
-            </div>
           </div>
           <div>
             <label className="form-label">Số câu Tự luận</label>
             <input className="form-input" type="number" min={0} max={10}
               value={config.essayCount ?? 3}
               onChange={(e) => onChange({ ...config, essayCount: Number(e.target.value) })} />
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 4 }}>
-              Điểm chia đều từ phần còn lại
-            </div>
           </div>
         </div>
 
@@ -216,6 +210,23 @@ function Step3({
 
   return (
     <div>
+      {/* BUG-06: Cảnh báo khi đề dùng kiến thức chung */}
+      {exam.usedFallback && (
+        <div style={{
+          marginBottom: 16, padding: "12px 16px",
+          background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.4)",
+          borderRadius: "var(--radius-md)", fontSize: 14, color: "#b45309",
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <span style={{ fontSize: 18 }}>⚠️</span>
+          <span>
+            <strong>Không tìm thấy tài liệu khớp.</strong>
+            {" "}Hệ thống đã sinh đề tự dựa vào kiến thức chung của SGK — không phải từ tài liệu bạn upload.
+            {" "}Để có kết quả tốt hơn, hãy upload tài liệu đúng môn và đúng khối trước khi sinh đề.
+          </span>
+        </div>
+      )}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
           <h2 style={{ color: "var(--text-primary)" }}>{exam.title}</h2>
@@ -239,7 +250,7 @@ function Step3({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
               <div className="question-number">
-                {q.type === "Trắc nghiệm" ? "🔵" : "📝"} Câu {idx + 1} · {q.type} · {q.points}đ
+                {q.type === "Trắc nghiệm" ? "🔵" : "📝"} Câu {idx + 1} · {q.type}
               </div>
               <div style={{ display: "flex", gap: 6 }}>
                 <button
@@ -286,15 +297,10 @@ function Step3({
                   </div>
                 )}
                 <div className="grid-2">
-                  <div>
+                  <div style={{ gridColumn: "span 2" }}>
                     <label className="form-label">Đáp án đúng</label>
                     <input className="form-input" value={q.answer}
                       onChange={(e) => updateQuestion(q.id, "answer", e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="form-label">Điểm</label>
-                    <input className="form-input" type="number" step="0.25" value={q.points}
-                      onChange={(e) => updateQuestion(q.id, "points", e.target.value)} />
                   </div>
                 </div>
                 {q.sourceChunk && (
@@ -344,20 +350,20 @@ function Step3({
 
 // ── Step 4: Xuất file ──────────────────────────────────────────────────
 function Step4({ exam, onBack }: { exam: GeneratedExam; onBack: () => void }) {
-  const [exporting, setExporting] = useState<"docx" | "pdf" | null>(null);
-  const [done, setDone] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<boolean>(false);
+  const [done, setDone] = useState<boolean>(false);
 
-  const handleExport = async (format: "docx" | "pdf") => {
-    setExporting(format);
+  const handleExportDocx = async () => {
+    setExporting(true);
     try {
-      const blob = await exportExam(exam, format);
+      const blob = await exportExam(exam, "docx");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `${exam.title}.${format}`; a.click();
+      a.href = url; a.download = `${exam.title}.docx`; a.click();
       URL.revokeObjectURL(url);
-      setDone(format);
+      setDone(true);
     } finally {
-      setExporting(null);
+      setExporting(false);
     }
   };
 
@@ -372,27 +378,36 @@ function Step4({ exam, onBack }: { exam: GeneratedExam; onBack: () => void }) {
           Chọn định dạng để tải xuống.
         </p>
 
-        <div className="grid-2" style={{ maxWidth: 480, margin: "0 auto" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, maxWidth: 360, margin: "0 auto" }}>
+          {/* Nút DOCX — hoạt động */}
           <button
             className="btn btn-primary btn-lg"
-            style={{ justifyContent: "center" }}
-            onClick={() => handleExport("docx")}
-            disabled={!!exporting}
+            style={{ justifyContent: "center", width: "100%" }}
+            onClick={handleExportDocx}
+            disabled={exporting}
           >
-            {exporting === "docx"
+            {exporting
               ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Đang tạo...</>
-              : <>{done === "docx" ? "✅" : "📝"} Tải .docx</>}
+              : <>{done ? "✅" : "📝"} Tải xuống .docx</>}
           </button>
-          <button
-            className="btn btn-secondary btn-lg"
-            style={{ justifyContent: "center" }}
-            onClick={() => handleExport("pdf")}
-            disabled={!!exporting}
-          >
-            {exporting === "pdf"
-              ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Đang tạo...</>
-              : <>{done === "pdf" ? "✅" : "📄"} Tải .pdf</>}
-          </button>
+
+          {/* Nút PDF — BUG-05 FIX: chưa hỗ trợ, hiển thị rõ thùng báo thay vì trả file sai */}
+          <div style={{ position: "relative", width: "100%" }}>
+            <button
+              className="btn btn-secondary btn-lg"
+              style={{ justifyContent: "center", width: "100%", opacity: 0.5, cursor: "not-allowed" }}
+              disabled
+              title="Tính năng đang được phát triển"
+            >
+              📄 Xuất PDF
+            </button>
+            <span style={{
+              position: "absolute", top: -8, right: -8,
+              background: "rgba(251,191,36,0.9)", color: "#78350f",
+              fontSize: 10, fontWeight: 700, padding: "2px 6px",
+              borderRadius: 99,
+            }}>Sắp ra mắt</span>
+          </div>
         </div>
 
         {done && (

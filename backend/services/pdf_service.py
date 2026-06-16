@@ -86,8 +86,11 @@ def _split_into_chunks(text: str, size: int, overlap: int) -> List[str]:
         if chunk:
             chunks.append(chunk)
 
-        start = end - overlap_chars
-        if start <= 0:
+        # BUG-07 FIX: đảm bảo start luôn tăng để tránh infinite loop
+        # khi overlap_chars >= chars_per_chunk
+        next_start = end - overlap_chars
+        start = max(next_start, start + 1)
+        if start >= len(text):
             break
 
     return chunks
